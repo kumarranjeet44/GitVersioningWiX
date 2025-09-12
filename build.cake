@@ -31,7 +31,7 @@ var zipPath = new DirectoryPath("./artifact");
 
 var EXG401UIAssemblyVersion = completeVersionForWix;
 
-var assemblyInfo = ParseAssemblyInfo("SampleApp/AssemblyInfo.cs");
+var assemblyInfo = ParseAssemblyInfo("SampleApp/Properties/AssemblyInfo.cs");
 var MSDAssemblyVersion = assemblyInfo.AssemblyVersion;
 var MSDAssemblyVersion_unstable = assemblyInfo.AssemblyInformationalVersion;
 
@@ -87,14 +87,14 @@ Task("Clean").Does(() => {
 
 Task("Restore")
     .Does(() => {
-        DotNetRestore("./SampleApp.sln");
+        DotNetCoreRestore("./SampleApp.sln");
     });
 
 // before building MSI, update the ProductVersion in AssemblyInfo.cs file so that while installing MSI, it will show the correct version, not previous version
 // before build execute ACS registration task as it is required to update the licenseclient file if production tag major version increased
 Task("Build").IsDependentOn("Restore").IsDependentOn("SetVersionInAssemblyInWix").Does(() =>
 {
-    DotNetBuild("./SampleApp.sln", new DotNetBuildSettings
+    DotNetCoreBuild("./SampleApp.sln", new DotNetCoreBuildSettings
     {
         Configuration = configuration,
         OutputDirectory = ouputDir
@@ -161,7 +161,7 @@ Task("Test").ContinueOnError().Does(() =>
     foreach (var project in testProjects)
     {
         var projectName = project.GetFilenameWithoutExtension();
-        var testSettings = new DotNetTestSettings
+        var testSettings = new DotNetCoreTestSettings
         {
             Loggers = new[] { $"trx;LogFileName={projectName}.trx" },
             ArgumentCustomization = args => args
@@ -169,7 +169,7 @@ Task("Test").ContinueOnError().Does(() =>
                 .Append("/p:CollectCoverage=true")
                 .Append("-- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover")
         };
-        DotNetTest(project.FullPath, testSettings);
+        DotNetCoreTest(project.FullPath, testSettings);
     }
 
     // Copy Test Results and Coverage Reports
@@ -206,7 +206,7 @@ Task("Test").ContinueOnError().Does(() =>
 
 Task("SetVersion")
    .Does(() => {
-       var assemblyInfoPath = "./AssemblyInfo.cs";
+       var assemblyInfoPath = "./SampleApp/Properties/AssemblyInfo.cs";
        if (!System.IO.File.Exists(assemblyInfoPath))
        {
            Error($"File not found: {assemblyInfoPath}");
