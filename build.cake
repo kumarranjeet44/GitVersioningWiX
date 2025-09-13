@@ -53,8 +53,10 @@ var enableDevMSI = Argument<bool>("enableDevMSI", false);
 var githubRunNumber = Argument("githubRunNumber", "PROVIDED_BY_GITHUB");
 var devCycleBaseRunNumber = Argument("devCycleBaseRunNumber", EnvironmentVariable("DEV_CYCLE_BASE_RUN_NUMBER") ?? PROVIDED_BY_GITHUB);
 
-var suffix = (int.Parse(githubRunNumber) - int.Parse(devCycleBaseRunNumber)).ToString();
-Information($"Calculated suffix: {suffix}");
+// var suffix = (int.Parse(githubRunNumber) - int.Parse(devCycleBaseRunNumber)).ToString();
+// Information($"Calculated suffix: {suffix}");
+
+var suffix = "20";
 
 if (gitVersion.BranchName == "develop") {
     completeVersionForAssemblyInfo_unstable = string.Concat(projectVersionNumber, "-alpha.", commitsSinceVersionSource);
@@ -88,14 +90,14 @@ Task("Clean").Does(() => {
 
 Task("Restore")
     .Does(() => {
-        DotNetCoreRestore("./SampleApp.sln");
+        DotNetRestore("./SampleApp.sln");
     });
 
 // before building MSI, update the ProductVersion in AssemblyInfo.cs file so that while installing MSI, it will show the correct version, not previous version
 // before build execute ACS registration task as it is required to update the licenseclient file if production tag major version increased
 Task("Build").IsDependentOn("Restore").IsDependentOn("SetVersionInAssemblyInWix").Does(() =>
 {
-    DotNetCoreBuild("./SampleApp.sln", new DotNetCoreBuildSettings
+    DotNetBuild("./SampleApp.sln", new DotNetBuildSettings
     {
         Configuration = configuration,
         OutputDirectory = ouputDir
@@ -162,7 +164,7 @@ Task("Test").ContinueOnError().Does(() =>
     foreach (var project in testProjects)
     {
         var projectName = project.GetFilenameWithoutExtension();
-        var testSettings = new DotNetCoreTestSettings
+        var testSettings = new DotNetTestSettings
         {
             Loggers = new[] { $"trx;LogFileName={projectName}.trx" },
             ArgumentCustomization = args => args
@@ -170,7 +172,7 @@ Task("Test").ContinueOnError().Does(() =>
                 .Append("/p:CollectCoverage=true")
                 .Append("-- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover")
         };
-        DotNetCoreTest(project.FullPath, testSettings);
+        DotNetTest(project.FullPath, testSettings);
     }
 
     // Copy Test Results and Coverage Reports
